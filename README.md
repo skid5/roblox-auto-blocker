@@ -1,4 +1,5 @@
 # roblox-auto-blocker
+block accounts using cookies
 
 # requirements
 ```
