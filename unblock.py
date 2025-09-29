@@ -9,8 +9,8 @@ RESET_COLOR = '\x1b[0m'
 SEPARATOR = '-' * 80
 
 lock = threading.Lock()
-successful_blocks = 0
-failed_blocks = 0
+successful_unblocks = 0
+failed_unblocks = 0
 
 def get_user_id(cookie):
     try:
@@ -51,8 +51,8 @@ def generate_rbx_event_tracker():
         f"browserid={random.randint(10**15,10**16 - 1)}"
     )
 
-def block_user(session, blocker_cookie, csrf_token, blocker_name, target_id):
-    global successful_blocks, failed_blocks
+def unblock_user(session, unblocker_cookie, csrf_token, unblocker_name, target_id):
+    global successful_unblocks, failed_unblocks
     target_name = get_username_by_id(target_id)
     rbx_event = generate_rbx_event_tracker()
 
@@ -60,7 +60,7 @@ def block_user(session, blocker_cookie, csrf_token, blocker_name, target_id):
         resp = session.post(
             f'https://apis.roblox.com/user-blocking-api/v1/users/{target_id}/unblock-user',
             cookies={
-                '.ROBLOSECURITY': blocker_cookie,
+                '.ROBLOSECURITY': unblocker_cookie,
                 'RBXEventTrackerV2': rbx_event
             },
             headers={
@@ -75,28 +75,28 @@ def block_user(session, blocker_cookie, csrf_token, blocker_name, target_id):
         )
         with lock:
             if resp.status_code == 200:
-                successful_blocks += 1
+                successful_unblocks += 1
                 print(SEPARATOR)
-                print(f"{SUCCESS_COLOR}{blocker_name} blocked user '{target_name}' successfully{RESET_COLOR}")
+                print(f"{SUCCESS_COLOR}{unblocker_name} unblocked user '{target_name}' successfully{RESET_COLOR}")
             else:
-                failed_blocks += 1
+                failed_unblocks += 1
                 print(SEPARATOR)
-                print(f"{FAILURE_COLOR}{blocker_name} failed to block user '{target_name}' (status {resp.status_code}){RESET_COLOR}")
+                print(f"{FAILURE_COLOR}{unblocker_name} failed to unblock user '{target_name}' (status {resp.status_code}){RESET_COLOR}")
     except Exception as e:
         with lock:
-            failed_blocks += 1
+            failed_unblocks += 1
             print(SEPARATOR)
-            print(f"{FAILURE_COLOR}Exception blocking user '{target_name}': {e}{RESET_COLOR}")
+            print(f"{FAILURE_COLOR}Exception unblocking user '{target_name}': {e}{RESET_COLOR}")
 
 def main():
-    global successful_blocks, failed_blocks
+    global successful_unblocks, failed_unblocks
     start = datetime.now()
 
     with open('cookie.txt', 'r') as f:
         raw_cookies = [line.strip() for line in f if line.strip()]
 
     users = []
-    print("https://github.com/skid55555")
+    print("https://github.com/skid5")
     for cookie in raw_cookies:
         uid, uname = get_user_id(cookie)
         if uid:
@@ -105,20 +105,20 @@ def main():
             print(f"{FAILURE_COLOR}Failed to retrieve user ID for a cookie{RESET_COLOR}")
 
     for user in users:
-        blocker_cookie = user['cookie']
-        blocker_name = user['name']
-        blocker_id = user['id']
-        targets = [u['id'] for u in users if u['id'] != blocker_id]
+        unblocker_cookie = user['cookie']
+        unblocker_name = user['name']
+        unblocker_id = user['id']
+        targets = [u['id'] for u in users if u['id'] != unblocker_id]
 
         with requests.Session() as session:
-            csrf = get_csrf_token(session, blocker_cookie)
+            csrf = get_csrf_token(session, unblocker_cookie)
             if not csrf:
-                print(f"{FAILURE_COLOR}CSRF token fetch failed for {blocker_name}{RESET_COLOR}")
+                print(f"{FAILURE_COLOR}CSRF token fetch failed for {unblocker_name}{RESET_COLOR}")
                 continue
 
             threads = []
             for tid in targets:
-                t = threading.Thread(target=block_user, args=(session, blocker_cookie, csrf, blocker_name, tid))
+                t = threading.Thread(target=unblock_user, args=(session, unblocker_cookie, csrf, unblocker_name, tid))
                 t.start()
                 threads.append(t)
 
@@ -127,8 +127,8 @@ def main():
 
     elapsed = (datetime.now() - start).total_seconds()
     print(SEPARATOR)
-    print(f"{SUCCESS_COLOR}Total successful blocks: {successful_blocks}{RESET_COLOR}")
-    print(f"{FAILURE_COLOR}Total failed blocks: {failed_blocks}{RESET_COLOR}")
+    print(f"{SUCCESS_COLOR}Total successful unblocks: {successful_unblocks}{RESET_COLOR}")
+    print(f"{FAILURE_COLOR}Total failed unblocks: {failed_unblocks}{RESET_COLOR}")
     print(f"Completed in {elapsed:.2f} seconds")
     print(SEPARATOR)
     input("Press Enter to exit...")
