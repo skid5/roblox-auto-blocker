@@ -96,7 +96,7 @@ def main():
         raw_cookies = [line.strip() for line in f if line.strip()]
 
     users = []
-    print("https://github.com/skid55555")
+    print("https://github.com/skid5")
     for cookie in raw_cookies:
         uid, uname = get_user_id(cookie)
         if uid:
